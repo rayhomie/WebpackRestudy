@@ -34,13 +34,14 @@ module.exports = {
       },
     },
     {
-      test: /\.jpg$/,
+      test: /\.(jpg|jpeg|png|gif)$/,
       exclude: /node_modules/,
       use: {
         loader: 'file-loader',
         options: {
           // 配置项在这里
-          name:'[name]_[hash].[ext]'//使用原先的文件名和后缀名
+          name: '[name]_[hash].[ext]',//使用原先的文件名和后缀名
+          outputPath: 'images/'//（匹配到的静态图片放到dist目录的imges下）
         }
       },
     }]
