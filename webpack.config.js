@@ -47,11 +47,11 @@ module.exports = {
       //     }
       //   },
       // },
-  /*url-loader和file-loader两者不能同时使用：
-    - url-loader内置了file-loader（可以直接安装url-loader使用）
-    - 可以设置file-loader的所有配置选项
-    - 使用limit属性来限制超过多大的图片，就不使用base64来打包图片
-    - 所有推荐使用url-loader（也可以处理css中的background-image:url()图片）*/
+      /*url-loader和file-loader两者不能同时使用：
+        - url-loader内置了file-loader（可以直接安装url-loader使用）
+        - 可以设置file-loader的所有配置选项
+        - 使用limit属性来限制超过多大的图片，就不使用base64来打包图片
+        - 所有推荐使用url-loader（也可以处理css中的background-image:url()图片）*/
       {
         test: /\.(jpg|jpeg|png)$/,
         exclude: /node_modules/,
@@ -68,22 +68,25 @@ module.exports = {
         test: /\.css$/,
         exclude: /node_modules/,
         //use的数组里面是从后往前加载，我们需要先解析css代码以及文件之间的依赖关系，再将style标签插入head中
-        //写法一：use: ['style-loader', 'css-loader']
+        //写法一：use: ['style-loader', 'css-loader',"postcss-loader"]
         //写法二：从后往前的顺序进行读取：
-        use: [{ loader: "style-loader" }, { loader: "css-loader" }]
+        use: [{ loader: "style-loader" }, { loader: "css-loader" }, { loader: "postcss-loader" }]
       },
       {//前提是安装sass预处理器
         test: /\.scss$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'sass-loader']
+        use: ['style-loader', 'css-loader', 'postcss-loader', 'sass-loader']
       },
       {//前提是安装less预处理器
         test: /\.less$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'less-loader']
+        use: ['style-loader', 'css-loader', 'postcss-loader', 'less-loader']
       }
+      /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
+      使用方式类似于babel，也需要安装相应想要使用的插件，
+      在`postcss.config.js`中进行配置，在`packege.json`中有browerslist字段设置。*/
     ]
   }
 }
