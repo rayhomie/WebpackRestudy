@@ -1,5 +1,7 @@
 import avatar from './头像.jpeg'
 import './index.css'
+// import './index.less'
+// import './index.scss'
 
 console.log('Hello')
 const message = (params) => {//使用babel-loader将新语法转成es5

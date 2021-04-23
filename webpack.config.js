@@ -47,8 +47,7 @@ module.exports = {
       //     }
       //   },
       // },
-      /*
-    url-loader**和file-loader两者不能同时使用：
+  /*url-loader和file-loader两者不能同时使用：
     - url-loader内置了file-loader（可以直接安装url-loader使用）
     - 可以设置file-loader的所有配置选项
     - 使用limit属性来限制超过多大的图片，就不使用base64来打包图片
@@ -68,10 +67,22 @@ module.exports = {
       {
         test: /\.css$/,
         exclude: /node_modules/,
-        //use的数组里面是从后往前加载，我们需要先解析css、再将style标签插入
+        //use的数组里面是从后往前加载，我们需要先解析css代码以及文件之间的依赖关系，再将style标签插入head中
         //写法一：use: ['style-loader', 'css-loader']
         //写法二：从后往前的顺序进行读取：
         use: [{ loader: "style-loader" }, { loader: "css-loader" }]
+      },
+      {//前提是安装sass预处理器
+        test: /\.scss$/,
+        exclude: /node_modules/,
+        //从后往前的顺序进行读取：
+        use: ['style-loader', 'css-loader', 'sass-loader']
+      },
+      {//前提是安装less预处理器
+        test: /\.less$/,
+        exclude: /node_modules/,
+        //从后往前的顺序进行读取：
+        use: ['style-loader', 'css-loader', 'less-loader']
       }
     ]
   }

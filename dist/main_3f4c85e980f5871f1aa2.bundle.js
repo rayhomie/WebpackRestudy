@@ -16,7 +16,7 @@
   \**********************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _jpeg__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./头像.jpeg */ \"./src/头像.jpeg\");\n/* harmony import */ var _index_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./index.css */ \"./src/index.css\");\n\n\nconsole.log('Hello');\n\nvar message = function message(params) {\n  //使用babel-loader将新语法转成es5\n  var res = setTimeout(function () {\n    console.log(params);\n  });\n  return res;\n};\n\nmessage('hello呀'); //向页面插入一张图片\n\nvar App = document.getElementById('app');\nvar image = new Image();\nimage.src = _jpeg__WEBPACK_IMPORTED_MODULE_0__.default;\nimage.className = 'avatar';\nApp.appendChild(image);\n\n//# sourceURL=webpack://webpacktest/./src/index.js?");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _jpeg__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./头像.jpeg */ \"./src/头像.jpeg\");\n/* harmony import */ var _index_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./index.css */ \"./src/index.css\");\n\n // import './index.less'\n// import './index.scss'\n\nconsole.log('Hello');\n\nvar message = function message(params) {\n  //使用babel-loader将新语法转成es5\n  var res = setTimeout(function () {\n    console.log(params);\n  });\n  return res;\n};\n\nmessage('hello呀'); //向页面插入一张图片\n\nvar App = document.getElementById('app');\nvar image = new Image();\nimage.src = _jpeg__WEBPACK_IMPORTED_MODULE_0__.default;\nimage.className = 'avatar';\nApp.appendChild(image);\n\n//# sourceURL=webpack://webpacktest/./src/index.js?");
 
 /***/ }),
 
