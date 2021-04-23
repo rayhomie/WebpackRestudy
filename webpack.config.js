@@ -8,7 +8,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 module.exports = {
   entry: {
     main: './src/index.js',
-    sub: './src/index.js'
+    // sub: './src/index.js'
   },
   mode: 'development',
   output: {
@@ -52,7 +52,7 @@ module.exports = {
     - url-loader内置了file-loader（可以直接安装url-loader使用）
     - 可以设置file-loader的所有配置选项
     - 使用limit属性来限制超过多大的图片，就不使用base64来打包图片
-    - 所有推荐使用url-loader（也可以处理css中的background-image:url()）*/
+    - 所有推荐使用url-loader（也可以处理css中的background-image:url()图片）*/
       {
         test: /\.(jpg|jpeg|png)$/,
         exclude: /node_modules/,
@@ -64,6 +64,14 @@ module.exports = {
             outputPath: 'images/'//（匹配到的静态图片放到dist目录的imges下）
           }
         },
+      },
+      {
+        test: /\.css$/,
+        exclude: /node_modules/,
+        //use的数组里面是从后往前加载，我们需要先解析css、再将style标签插入
+        //写法一：use: ['style-loader', 'css-loader']
+        //写法二：从后往前的顺序进行读取：
+        use: [{ loader: "style-loader" }, { loader: "css-loader" }]
       }
     ]
   }
