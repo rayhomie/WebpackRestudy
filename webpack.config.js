@@ -52,7 +52,16 @@ module.exports = {
         exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
-          options: { /*配置项在这里*/ }
+          // options: { /*配置项在这里*/
+          //   presets: [
+          //     [
+          //       '@babel/preset-env',
+          //       {//垫片polyfill（告诉babel我们只需要使用到的ES6+的api的实现，减少没必要的多余代码）
+          //         useBuiltIns: 'usage'
+          //       }
+          //     ]
+          //   ]
+          // }
         },
       },
       // {

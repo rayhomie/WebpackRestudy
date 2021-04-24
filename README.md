@@ -131,7 +131,7 @@ module.exports = {
 
 ### babel-loader
 
-怎么在webpack中使用babel呢?
+##### 怎么在webpack中使用babel呢?
 
 ①首先安装babel-loader
 
@@ -182,6 +182,66 @@ module: {
 ```bash
 npm i @babel/preset-env --save-dev
 ```
+
+##### 使用babel-polyfill（垫片）补充ES6代码的实现
+
+低版本的浏览器没有新版本的API，如：promise、Array.from、Map等。所以我们需要使用babel-polyfill来在代码中补充这些缺少的api的实现。
+
+①安装`npm i --save @babel/polyfill`，它不是开发时依赖，是生产环境也需要的依赖。
+
+②在项目入口文件中导入垫片
+
+```js
+//index.js
+import '@babel/polyfill'
+
+const promiseArray = [
+  new Promise(()=>{}),
+  new Promise(()=>{})
+]
+
+promiseArray.map(promise=>promise)
+```
+
+③在presets的设置中进行配置（告诉babel我们只需要使用到的ES6+的api的实现，减少没必要的多余代码）
+
+```js
+//.babelrc
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "useBuiltIns": "usage"
+      }
+    ]
+  ]
+}
+
+
+//webpack.config.js
+{
+  test: /\.js$/,
+    exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+          options: { /*配置项在这里*/
+            presets: [
+              [
+                '@babel/preset-env',
+                {//垫片polyfill（告诉babel我们只需要使用到的ES6+的api的实现，减少没必要的多余代码）
+                  useBuiltIns: 'usage'
+                }
+              ]
+            ]
+          }
+        },
+      },
+```
+
+
+
+
 
 
 
