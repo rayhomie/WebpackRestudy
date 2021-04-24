@@ -18,3 +18,7 @@ App.appendChild(image)
 
 //使用iconfont的图标或者字体
 App.innerHTML = '<div class="iconfont icon-fengche"></div>';
+
+
+fetch('/api/v1/index/package/3454?offset=0&limit=18')
+  .then(d => d.json()).then(d => console.log(d))

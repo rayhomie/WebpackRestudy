@@ -14,6 +14,19 @@ module.exports = {
   开发环境最佳实践：eval-cheap-module-source-map
   生产环境最佳实践：cheap-module-source-map（线上发生错误的时候提示更全面）*/
   devtool: 'eval-cheap-module-source-map',
+  //配置告诉devServer，打包好的文件该到dist文件夹下去取
+  devServer: {
+    contentBase: './dist',
+    proxy: {//配置反向代理
+      '/api': {//只要是遇到域名后面是/api开头的请求都转发到target去
+        target: 'http://www.weshineapp.com/',
+        pathRewrite: {//将/api开头的，'/api'改成'api'
+          '^/api': '/api'
+        },
+        changeOrigin: true//跨域请求
+      }
+    }
+  },
   mode: 'development',
   output: {
     // publicPath: 'http://cdn.xxx.com',
@@ -28,6 +41,7 @@ module.exports = {
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       template: './src/index.html',
+      cache: false
     }),
   ],
   module: {//使用loader

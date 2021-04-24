@@ -15,6 +15,19 @@ module.exports = {
     sub: './src/index.js'
   },
   devtool:'eval-source-map',//开启SourceMap代码映射//默认是eval
+  //配置告诉devServer，打包好的文件该到dist文件夹下去取
+  devServer: { 
+    contentBase: './dist',
+    proxy:{//配置反向代理
+      '/api':{//只要是遇到域名后面是/api开头的请求都转发到target去
+        target:'http://www.weshineapp.com/',  
+        pathRewrite: {//将/api开头的，'/api'改成'api'
+          '^/api': '/api'
+        },
+        changeOrigin:true//跨域请求
+      }
+    }
+  },
   mode: 'development',
   output: {
     //publicPath: 'http://cdn.xxx.com',
@@ -516,11 +529,102 @@ module.exports = {
 
     
 
+## 4】WebpackDevServer
+
+#### 方式一：命令行
+
+使用webpack-cli命令行中的参数--watch，记得在HtmlWebpackPlugin插件中关掉缓存。
+
+弊端：每次保存代码之后，需要手动刷新浏览器（而且没有模块热更新功能）。
+
+```json
+//package.json
+{
+  "name": "webpacktest",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "webpack --watch"
+  }
+  ...
+}
+//webpack.config.js
+ new HtmlWebpackPlugin({
+   template: './src/index.html',
+   cache: false//关闭缓存
+ }),
+```
+
+#### 方式二：使用webpack-dev-server
+
+优点：保存文件后会直接执行重新打包，并刷新服务器（有模块热更新、可以请求转发代理）
+
+分为三步：
+
+①安装开发者服务器
+
+`npm i -D webpack-dev-server`
+
+②配置webpack.config.js的devServer属性
+
+```js
+//webpack.config.js
+module.exports = {
+  entry: {...},
+  //配置告诉devServer，打包好的文件该到dist文件夹下去取
+  devServer: { contentBase: './dist' },
+  mode: 'development',
+  output: {...},
+  ...
+}
+```
+
+③使用命令行启动
+
+```bash
+webpack serve
+```
+
+##### 请求转发（反向代理）
+
+```js
+//webpack.config.js
+module.exports = {
+  entry: {...},
+  devServer: { 
+    //配置告诉devServer，打包好的文件该到dist文件夹下去取
+    contentBase: './dist',
+    proxy:{//配置反向代理
+      '/api':{//只要是遇到域名后面是/api开头的请求都转发到target去
+        target:'http://www.weshineapp.com/',
+        pathRewrite: {//将/api开头的，'/api'改成'api'
+          '^/api': '/api'
+        },
+        changeOrigin:true//跨域请求
+      }
+    }
+  },
+  mode: 'development',
+  output: {...},
+  ...
+};
+
+//index.js我们可以使用fetch来请求一个接口试试
+//其实接口地址是：http://www.weshineapp.com/api/v1/index/package/3454?offset=0&limit=18
+fetch('/api/v1/index/package/3454?offset=0&limit=18')
+.then(d => d.json()).then(d => console.log(d))
+```
+
+
+
+##### HMR模块热替换
 
 
 
 
-## 4】plugin
+
+
+
+## 5】plugin
 
 总结一句话就是：插件可以在webpack运行在某个阶段（生命周期）做一些事情。
 
