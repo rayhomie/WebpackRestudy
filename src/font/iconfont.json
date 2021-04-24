@@ -1,0 +1,16 @@
+{
+  "id": "2508754",
+  "name": "自定义项目",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "20519842",
+      "name": "风车",
+      "font_class": "fengche",
+      "unicode": "e60d",
+      "unicode_decimal": 58893
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import avatar from './头像.jpeg'
-// import './index.css'
-import './index.less'
-// import './index.scss'
+// import styles from './index.css'//启用css模块化，就不能使用正常导入
+// import './index.less'
+import './index.scss'
 
 console.log('Hello')
 const message = (params) => {//使用babel-loader将新语法转成es5
@@ -13,5 +13,8 @@ message('hello呀')
 const App = document.getElementById('app')
 const image = new Image()
 image.src = avatar
-image.className = 'avatar'
+image.className += 'avatar'//模块化哈希
 App.appendChild(image)
+
+//引入字体图标
+App.innerHTML = '<div class="iconfont icon-fengche"></div>';

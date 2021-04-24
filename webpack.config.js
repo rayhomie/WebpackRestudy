@@ -70,7 +70,17 @@ module.exports = {
         //use的数组里面是从后往前加载，我们需要先解析css代码以及文件之间的依赖关系，再将style标签插入head中
         //写法一：use: ['style-loader', 'css-loader',"postcss-loader"]
         //写法二：从后往前的顺序进行读取：
-        use: [{ loader: "style-loader" }, { loader: "css-loader" }, { loader: "postcss-loader" }]
+        use: [{ loader: "style-loader" },
+        {
+          loader: "css-loader",
+          options: {
+            modules: {
+              localIdentName: '[name][hash:base64:6]'
+            },
+          }
+          //打开cssmodule,启用之后就只能用模块化导入，也可以进行配置，让一些文件不启用模块化
+        },
+        { loader: "postcss-loader" }]
       },
       {//前提是安装sass预处理器
         test: /\.scss$/,
@@ -83,10 +93,18 @@ module.exports = {
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
         use: ['style-loader', 'css-loader', 'postcss-loader', 'less-loader']
-      }
+      },
       /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
       使用方式类似于babel，也需要安装相应想要使用的插件，
       在`postcss.config.js`中进行配置，在`packege.json`中有browerslist字段设置。*/
+      {
+        test: /\.(eot|woff|ttf|svg)/,
+        include: [path.resolve(__dirname, 'src/font')],
+        use: {
+          loader: 'file-loader',
+          options: { outputPath: 'font/' },
+        }
+      }
     ]
   }
 }

@@ -283,9 +283,106 @@ module: {//使用loader
 
 ### cssModule启用
 
+需要注意的是**如果启用了cssmodule的话就不能使用普通的方式进行导入css**，因为css文件打包后类名变成了hash值，不能用我们自己定义的类名去找样式。
 
+如果不启用cssmodule的话，`import './index.css'`是全局的引入，在全局都生效。
 
+```js
+module: {//使用loader
+  rules: [
+    {
+      test: /\.css$/,
+      exclude:[path.resolve(__dirname, '..', 'node_modules')],
+      use: [
+        { loader: "style-loader" },
+        {
+          loader: "css-loader",
+        	options:{
+            modules:true//css-module打开。
+          }
+        }
+      ]
+    },
+    //此时我们的配置是遇到.css文件就回去开启,而引入的npm包的样式还没有处理。所以还需要一个配置：单独处理node_module内的css文件
 
+    { 
+      test: /\.css$/,
+      use: ['style-loader','css-loader','postcss-loader'],
+    include:[path.resolve(__dirname, '..', 'node_modules')]
+}
+  ]
+}
+```
+
+然后再每个模块中就可以使用cssmodule的语法了：
+
+```js
+//index.css
+.avatar{
+  width:10;
+  height:10;
+}
+
+//index.js
+import styles from './index.css
+console.log(styles)//{avatar: "_1ofLYuuFNEe_WYUYkaG3VO"}
+//import './index.css'//启用之后就不能这样导入，因为css文件打包后类名变成了hash值，不能用.avatar找到相应类名。
+const App = document.getElementById('app')
+const image = new Image()
+image.src = avatar
+image.className += styles.avatar//只能由这种方式去使用类名
+App.appendChild(image)
+```
+
+#### [支持`css module`模式和普通模式混用](https://www.cnblogs.com/walls/p/9153555.html)
+
+1.用文件名区分两种模式
+
+- `*.global.css` 普通模式
+- `*.css` css module模式
+
+这里统一用 `global` 关键词进行识别。
+
+2.用正则表达式匹配文件
+
+```javascript
+// css module
+{ 
+    test: new RegExp(`^(?!.*\\.global).*\\.css`),
+    use: [
+        {
+            loader: 'style-loader'
+        }，
+        {
+            loader: 'css-loader',
+            options: {
+                modules: {  localIdentName: '[hash:base64:6]' },
+              }
+        },
+        {
+            loader: 'postcss-loader'
+        }
+    ],
+    exclude:[path.resolve(__dirname, '..', 'node_modules')]
+}
+
+// 普通模式
+{ 
+    test: new RegExp(`^(.*\\.global).*\\.css`),
+    use: [
+        {
+            loader: 'style-loader'
+        }，
+        {
+            loader: 'css-loader',
+        },
+        {
+            loader: 'postcss-loader'
+        }
+    ],
+    exclude:[path.resolve(__dirname, '..', 'node_modules')]
+}
+```
 
 
 
