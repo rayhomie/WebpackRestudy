@@ -17,7 +17,8 @@ module.exports = {
   devtool:'eval-source-map',//开启SourceMap代码映射//默认是eval
   //配置告诉devServer，打包好的文件该到dist文件夹下去取
   devServer: { 
-    contentBase: './dist',
+    contentBase: './dist',//在webpack4+该字段也可以用static
+    hot:true,//启动热模块更新webpack-dev-server3默认不启动，4+默认启动
     proxy:{//配置反向代理
       '/api':{//只要是遇到域名后面是/api开头的请求都转发到target去
         target:'http://www.weshineapp.com/',  
@@ -592,7 +593,8 @@ module.exports = {
   entry: {...},
   devServer: { 
     //配置告诉devServer，打包好的文件该到dist文件夹下去取
-    contentBase: './dist',
+    contentBase: './dist',//在webpack4+该字段也可以用static
+    hot:true,//启动热模块更新webpack-dev-server3默认不启动，4+默认启动
     proxy:{//配置反向代理
       '/api':{//只要是遇到域名后面是/api开头的请求都转发到target去
         target:'http://www.weshineapp.com/',
@@ -618,7 +620,71 @@ fetch('/api/v1/index/package/3454?offset=0&limit=18')
 
 ##### HMR模块热替换
 
+默认是不启动热模块替换的，需要在devServer配置中加上`hot:true`。
 
+热替换会让页面不会进行刷新，而是**会保留保存代码之前的页面运行中的状态**。
+
+光光在devServer中配置`hot:true`，只能保证一些css代码改变之后再保存，页面的函数执行状态保留不变。（因为HMR修改css的时候使用了`style-loader`，并没有触发js文件解析，而这些状态都是JS执行产生的。css的HMR也就没有JS状态热更新麻烦）
+
+如果js中一个模块代码改变之后保存，想要不丢失另外的模块的状态，还需要一些深层次的配置。
+
+###### JS状态的HMR：
+
+```js
+/*举个栗子：
+一个模块中依赖了两个子组件，此时我们在页面上可以点击module1组件进行计数。
+再修改module2的值，保存代码，会发现HMR丢失了module1的状态*/
+
+//index.js
+import module1 from './module/module1.js'
+import module2 from './module/module2.js'
+//加载模块一和模块二（js的HMR）
+module1()
+module2()
+
+//module/module1.js
+function module1() {
+  const Div = document.createElement('div');
+  Div.innerText = 0
+  Div.setAttribute('id', 'module1')
+  Div.addEventListener('click', () => {
+    Div.innerText++
+  })
+  document.body.appendChild(Div);
+}
+export default module1
+
+//module/module2.js
+function module2() {
+  const Div = document.createElement('div');
+  Div.setAttribute('id', 'module2')
+  Div.innerText = 3000//触发点击改变了module1的状态，再修改module2的状态，保存代码，会发现HMR丢失了module1的状态
+  document.body.appendChild(Div);
+}
+export default module2
+```
+
+此时如果我们想要实现更改module2的代码，但是module1中的执行状态不改变，就需要使用module.hot进行拦截一下：
+
+```js
+//index.js
+import module1 from './module/module1.js'
+import module2 from './module/module2.js'
+
+//HMR拦截
+if (module.hot) {
+  //但我们接收到module2.js代码改变时做出拦截，只会执行回调中的代码，不进行其他刷新
+  module.hot.accept('./module/module2.js', () => {
+    //将之前的dom删除
+    document.body.removeChild(document.getElementById('module2'));
+    module2()//重新执行module2.js
+  })
+}
+
+//加载模块一和模块二（js的HMR）
+module1()
+module2()
+```
 
 
 

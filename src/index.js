@@ -36,6 +36,6 @@ if (module.hot) {
   })
 }
 
-//加载模块一和模块二（js的HMR）
+//加载模块一和模块二（js状态的HMR）
 module1()
 module2()
