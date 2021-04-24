@@ -16,7 +16,8 @@ module.exports = {
   devtool: 'eval-cheap-module-source-map',
   //配置告诉devServer，打包好的文件该到dist文件夹下去取
   devServer: {
-    contentBase: './dist',
+    contentBase: './dist',//在webpack4+该字段也可以用static
+    hot: true,//启动热模块更新webpack-dev-server3默认不启动，4+默认启动
     proxy: {//配置反向代理
       '/api': {//只要是遇到域名后面是/api开头的请求都转发到target去
         target: 'http://www.weshineapp.com/',
