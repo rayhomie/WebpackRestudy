@@ -16,5 +16,5 @@ image.src = avatar
 image.className += 'avatar'//模块化哈希
 App.appendChild(image)
 
-//引入字体图标
+//使用iconfont的图标或者字体
 App.innerHTML = '<div class="iconfont icon-fengche"></div>';

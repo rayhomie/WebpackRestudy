@@ -1,7 +1,5 @@
 # 重学webpack
 
-https://www.bilibili.com/video/BV12a4y1W76V
-
 ## 1】入口出口配置
 
 ```js
@@ -16,6 +14,7 @@ module.exports = {
     main: './src/index.js',
     sub: './src/index.js'
   },
+  devtool:'eval-source-map',//开启SourceMap代码映射//默认是eval
   mode: 'development',
   output: {
     //publicPath: 'http://cdn.xxx.com',
@@ -75,21 +74,40 @@ module.exports = {
         //use的数组里面是从后往前加载，我们需要先解析css代码以及文件之间的依赖关系，再将style标签插入head中
         //写法一：use: ['style-loader', 'css-loader']
         //写法二：从后往前的顺序进行读取：
-        use: [{ loader: "style-loader" }, { loader: "css-loader" }]
+        use: [
+          { loader: "style-loader" },
+          { loader: "css-loader",
+           options:{//开启cssmodule
+             modules: { localIdentName: '[name][hash:base64:6]' }
+           } 
+          },
+          { loader: "postcss-loader" }
+        ]
       },
       {//前提是安装sass预处理器
         test: /\.scss$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'sass-loader']
+        use: ['style-loader', 'css-loader', 'sass-loader','postcss-loader']
       },
       {//前提是安装less预处理器
         test: /\.less$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'less-loader']
+        use: ['style-loader', 'css-loader', 'less-loader','postcss-loader']
+      },
+      /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
+      使用方式类似于babel，也需要安装相应想要使用的插件，
+      在`postcss.config.js`中进行配置，在`packege.json`中有browerslist字段设置。*/
+      {//解析加载iconfont需要的文件并打包
+        test: /\.(eot|woff|ttf|svg)/,
+        include: [path.resolve(__dirname, 'src/font')],
+        //只处理src下的font文件夹
+        use: {
+          loader: 'file-loader',
+          options: { outputPath: 'font/' },//打包到dist下的font文件夹
+        }
       }
-      
     ]
   }
 }
@@ -386,7 +404,123 @@ App.appendChild(image)
 
 
 
-## 3】plugin
+### file-loader打包字体图标
+
+①首先我们到iconfont去下载我们需要的字体和图标源文件。在把他们保存到前端项目的静态资源文件夹font中。
+
+其中有个css文件如下：
+
+```css
+/*iconfont配置*/
+@font-face {
+  font-family: "iconfont";
+  src: url("./font/iconfont.eot?t=1619246879033"); /* IE9 */
+  src: url("./font/iconfont.eot?t=1619246879033#iefix")
+      format("embedded-opentype"),
+    /* IE6-IE8 */
+      url("data:application/x-font-woff2;charset=utf-8;base64,d09GMgABAAAAAAOUAAsAAAAAB/gAAANGAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHEIGVgCCcAqEAIMRATYCJAMICwYABCAFhG0HMRu4BhEVnBXIfhbGzosiSens4+dPubT5NJqhauz3iwiqtX97bvchqo/kQLMGFPKrkNFhIWM8sJGpSBY+9/dz+pIC/QxLdp1QRI7UXJGTmy8g/gwQhZ/RE256939qh32hA8rCPE+02/+4P5J9uS7bxiUqYAGbzuD9fxzutbGF5rvLc5xzURdgHFBAe2ObrED6YPyHsQta4nkCTXN2xOn6hgbqMnNaIB5sMk6oZ1RyQ3aoC9WKtRniNfDUizL5A7wKvh//TIYQFCoJzLwLes0Dh78dKy6l/m8sHgLY0xnANpGwg0zcVJrOIEWhHUlTDWVLbCs7+EmVpcfa7D8eQVTBzGyDGci6JrbDudS/LEBGD08BfBvUj157mCsUCYViWyDxDhE5aaxgWJm3L/X0oCKncTotqFJBisbRXoaWGuESLHdVjKY0K3FWt6UueJzYJQ6bPL2+zMlKxa7KjoIxpnpAL3EqkgKHt88qzNgwVYG72gdDSkoXHkOY5fKLm8Y9qaEvw5gws5cyr8Ms7oFBJtP03+7NzfCwo1aNBI4xPleV4Ytc1C3pZtypun47M5967kD71cr04qokEXG/qUfBjaCEJD4GK1EtHoeIEiKIUTV1UKlOtXCiVJBoMgQx7hYqj+zHE80M4M3bPpq/0uWjokh6Ilhl8SMl3BFkHKhbaGjF/UAlgP0nYtpn6pSHSqKi41rgjxLPBVj2kUI7BNRvfo4SCTgEKN+mT87Eb/uN/162Dy7/1VtcgO/XzQWO8m2GbhbqN2cOfhK7Y0vWuKa6yAq7MlZ4CoM3X9XURAnbhn4MtUxIDKHO2RAKNbOQ1K0gM3YHKlr2oKrudABN28rNLSNkKXIDW94AQt8HCl0fIen7IjP2BxVTf6jqxxKa7mK0Z8taBHFCKBkNqCsE3XfW1rIIszfojo2kNDcgH5Cm4IU0SvLREjukKRZMJ5cxW7DUt1CAy7Bpehior1Bz5JmHPI5t1Zsi3bcz4QRBEkMGUK5AoPU61uvMROHzG8g5akjU0FRlPkBkEnoHqUjSAVmKuk5Nt3LN5MTJMGYBi/RaoAAG1FihHhiqR1WQxiJ+QGCQi1E721UULS9p324XNJnyIqyhSe0eO6c9zmYAAA==")
+      format("woff2"),
+    url("./font/iconfont.woff?t=1619246879033") format("woff"),
+    url("./font/iconfont.ttf?t=1619246879033") format("truetype"),
+    /* chrome, firefox, opera, Safari, Android, iOS 4.2+ */
+      url("./font/iconfont.svg?t=1619246879033#iconfont") format("svg"); /* iOS 4.1- */
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-fengche:before {
+  content: "\e60d";
+}
+```
+
+②使用file-loader解析这些后缀名的文件
+
+```js
+module: {//使用loader
+  rules: [
+    {
+      test: /\.(eot|woff|ttf|svg)/,
+      include: [path.resolve(__dirname, 'src/font')],//只处理src下的font文件夹
+      use: {
+        loader: 'file-loader',
+        options: { outputPath: 'font/' },//打包到dist下的font文件夹
+      }
+    }
+  ]
+} 
+```
+
+然后就可以使用对应的类名加载图标了
+
+```js
+const App = document.getElementById('app')
+//引入字体图标
+App.innerHTML = '<div class="iconfont icon-fengche"></div>';
+```
+
+
+
+## 3】SourceMap
+
+`将dist文件夹下打包好的代码目录结构`和`源代码目录结构`联系起来，就是SourceMap
+
+```js
+//举例：比如说，在src/index.js的第一行，写了一句console.logg('下次一定！')
+/*很明显在打包好之后执行是有问题的，在浏览器上点开错误，我们发现是dist/bundle.js的第七行。
+我们需要很快定位到源文件中代码的问题，就需要SourceMap
+*/
+dist/bundle.js的第七行 --> src/index.js的第一行
+```
+
+#### 开启SourceMap
+
+```js
+module.exports = {
+  mode: 'development',
+  entry:{...},
+  output:{...},
+  devtool:'eval-source-map',//开启SourceMap代码映射，如果不使用就填false
+  ...
+}
+```
+
+#### 配置SourceMap
+
+这个devtool属性有很多取值，参考官网：https://v4.webpack.docschina.org/configuration/devtool/#devtool
+
+注意：不同的值**会明显影响到构建**(build)和重新构建(rebuild)的速度。
+
+`SourceMapDevToolPlugin`*/*`EvalSourceMapDevToolPlugin`插件来使用sourcemap配置项更丰富。
+
+*切勿同时使用* `devtool` *选项和* `SourceMapDevToolPlugin`*/*`EvalSourceMapDevToolPlugin` *插件*
+
+- 常用的配置：
+
+  - `eval`：打包是最快的。使用的是：js的eval来执行。（但是代码多了之后不是很准确）
+
+  - `inline-source-map`：不会生成.map文件，而是将sourcemap放在bundle.js最后一行用**base64格式储存**。（**完整代码**映射关系）
+
+  - `inline-cheap-source-map`：生成方式和👆的一样，但是这个更粗略，所以构建更快一点（**行的代码映射、只会记录业务代码的映射**）。
+
+  - `inline-cheap-module-source-map`：生成方式和👆的一样，（**也是行代码映射，但不仅会记录业务代码映射，而且会记录第三方库的代码映射**）
+
+  - `eval-cheap-module-source-map`：最佳实践开发的环境用这个。
+
+  - `cheap-module-source-map`：生产环境用这个（线上发生错误的时候提示更全面）
+
+    
+
+
+
+
+
+## 4】plugin
 
 总结一句话就是：插件可以在webpack运行在某个阶段（生命周期）做一些事情。
 
@@ -398,3 +532,4 @@ App.appendChild(image)
 
 
 
+https://www.bilibili.com/video/BV12a4y1W76V

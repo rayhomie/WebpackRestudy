@@ -10,6 +10,10 @@ module.exports = {
     main: './src/index.js',
     // sub: './src/index.js'
   },
+  /*启用sourcemap:
+  开发环境最佳实践：eval-cheap-module-source-map
+  生产环境最佳实践：cheap-module-source-map（线上发生错误的时候提示更全面）*/
+  devtool: 'eval-cheap-module-source-map',
   mode: 'development',
   output: {
     // publicPath: 'http://cdn.xxx.com',
@@ -97,12 +101,12 @@ module.exports = {
       /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
       使用方式类似于babel，也需要安装相应想要使用的插件，
       在`postcss.config.js`中进行配置，在`packege.json`中有browerslist字段设置。*/
-      {
+      {//解析加载iconfont需要的文件并打包
         test: /\.(eot|woff|ttf|svg)/,
-        include: [path.resolve(__dirname, 'src/font')],
+        include: [path.resolve(__dirname, 'src/font')],//只处理src下的font文件夹
         use: {
           loader: 'file-loader',
-          options: { outputPath: 'font/' },
+          options: { outputPath: 'font/' },//打包到dist下的font文件夹
         }
       }
     ]
