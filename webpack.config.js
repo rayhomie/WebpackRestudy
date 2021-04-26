@@ -8,8 +8,9 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
 module.exports = {
   entry: {
-    // main: './src/index.js',
-    theory_analysis: './src/theory_analysis.js'
+    // index: './src/index.js',//基础配置
+    // theory_analysis: './src/theory_analysis.js'//打包优化，dll
+    lazyLoad: './src/lazyLoad.js'//路由懒加载、按需加载
   },
   /*启用sourcemap:
   开发环境最佳实践：eval-cheap-module-source-map
