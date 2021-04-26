@@ -4,6 +4,6 @@ button.innerHTML = '按需加载'
 
 button.addEventListener('click', () => {
   import('./module/module1.js').then(data => data.default())
-  //es6草案中的语法，jsonp实现动态加载文件
+  //es6草案中的语法，ajax实现动态加载文件
 })
 document.body.appendChild(button)
