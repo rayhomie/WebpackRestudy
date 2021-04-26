@@ -4,6 +4,7 @@
 
 ```js
 const path = require('path')
+const webpack = require('webpack')
 
 //生成一个html模板
 const HtmlWebpackPlugin = require('html-webpack-plugin')
@@ -11,8 +12,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 module.exports = {
   entry: {
-    main: './src/index.js',
-    sub: './src/index.js'
+    index: './src/index.js',//基础配置
+    // theory_analysis: './src/theory_analysis.js'//打包优化，dll
+    // lazyLoad: './src/lazyLoad.js'//路由懒加载、按需加载
   },
   devtool:'eval-source-map',//开启SourceMap代码映射//默认是eval
   //配置告诉devServer，打包好的文件该到dist文件夹下去取
@@ -43,6 +45,12 @@ module.exports = {
       template: './src/index.html'
     }),
     new CleanWebpackPlugin(),
+    //引用动态链接库的插件(告诉webpack我们用了哪些动态链接库，该怎么使用这些dll)
+    new webpack.DllReferencePlugin({//要使用Dll的话还需要单独打包动态链接库
+      //需要找到生成的dll动态链接库的manifest映射文件
+      manifest: path.resolve(__dirname, 'dll', 'react.manifest.json')
+      //manifest: require('./dll/react.manifest.json'),//这样也可以
+    })
   ],
   module: {//使用loader
     rules: [
@@ -762,4 +770,294 @@ module2()
 
 
 
+## 6】webpack打包优化
+
+webpack可以做什么？代码转换、文件优化、代码分割、模块合并、模块热替换、代码校验、自动发布。
+
+### 原理分析：
+
+```js
+//theory_analysis.js
+console.log('Hello');
+
+//dist/bundle.js打包出来的结果
+(() => {
+  var __webpack_modules__ = {
+    "./src/theory_analysis.js": () => { eval("console.log('Hello');"); }
+  };
+  var __webpack_exports__ = {};
+  __webpack_modules__["./src/theory_analysis.js"]();
+})();
+```
+
+### webpack自带的优化：
+
+#### 1、tree-sharking
+
+依赖关系的解析（不用的代码不打包）**webpack的生产环境才会使用tree-sharking**。
+
+#### 2、scope-hoisting
+
+作用域提升（定义的变量或者常量，如果不传入函数计算，都不打包到结果中，而是直接使用定义的常量）
+
+
+
+### 速度的优化：
+
+#### 1、happypack
+
+多线程打包（注意体积比较小的时候，打包比较慢）
+
+#### 2、[Dll动态链接库](https://blog.csdn.net/u012987546/article/details/100580745)
+
+拆一些公共的文件：react/react-dom/vue/jQuery，单独打包到一个文件。最后将这个文件放在cdn上。（也可以在开发时使用dll，链接库只需要被构建一次，大大提升项目构建效率）
+
+主要使用两个webpack内置的插件：**DllPlugin**、**DllReferencePlugin**
+
+- DllPlugin：生成动态链接库dll的插件。（在打包比较大的公共框架（比如react、vue、jQuery）文件的webpack打包配置文件中使用）
+- DllReferencePlugin：用来在项目中引用动态链接库的插件（在构建项目的webpack打包配置文件中使用）
+
+##### 步骤一：
+
+单独启webpack配置文件打包动态链接库。我们在项目根目录下创建一个`webpack_dll.config.js`文件（用于打包生成动态链接库），会用到DllPlugin插件
+
+```js
+//webpack_dll.config.js
+//单独打包react用动态链接库Dll
+const path = require('path');
+const webpack = require('webpack')
+module.exports = {
+  mode: 'development',
+  entry: {
+    /*把项目需要所有的 react 相关的放到一个单独的动态链接库
+      又例如：vue: ['vue', 'vuex', 'vue-router'],
+      jquery: ['jQuery']*/
+    react: ['react', 'react-dom']
+  },
+  output: {
+    filename: '[name].dll.js',//打包后的文件名称
+    path: path.resolve(__dirname, 'dll'),//输出到的文件夹
+    library: '_dll_[name]'//存放动态链接库的全局变量名称，加上_dll_是为了防止全局变量冲突
+  },
+  plugins: [
+    //使用webpack内置的生成动态链接库dll的插件（会生成两个文件，一个是打包好的库代码，另一个是映射文件）
+    new webpack.DllPlugin({
+      /*动态链接库的全局变量名称，需要和 output.library 中保持一致
+        该字段的值也就是输出的 manifest.json 文件 中 name 字段的值
+        例如 react.manifest.json 中就有 "name": "_dll_react"*/
+      name: '_dll_[name]',
+      // 描述动态链接库的 manifest.json 文件输出时的文件名称
+      path: path.join(__dirname, 'dll', '[name].manifest.json'),
+    })
+  ]
+}
+```
+
+##### 步骤二：
+
+此时，我们为了方便，需要在`package.json`中创建打包动态链接库的脚本命令：
+
+```json
+{
+  "name": "webpacktest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "webpack.config.js",
+  "scripts": {
+		...
+    "dll": "webpack --mode development --config webpack_dll.config.js"
+  },
+  ...
+}
+```
+
+此时我们就可以执行命令`npm run dll`，将动态链接库打包好了。并输出到dll文件夹下，生成了两个文件`react.dll.js`（打包的库代码）和`react.manifest.json`（动态链接映射文件）（这个打包好的动态链接库可以放到cdn上进行优化）
+
+##### 步骤三：
+
+在html文件中以script标签的形式**手动插入动态链接库**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>webpack测试打包</title>
+  <!-- 库文件必须要放在最前面 -->
+  <script defer src="../dll/react.dll.js"></script>
+  <script defer src="theory_analysis_38a7916d0fdc58ecb1c9.bundle.js"></script>
+</head>
+<body>
+  <h1>头像</h1>
+  <div id="app"></div>
+</body>
+</html>
+```
+
+这时候还不行，因为虽然我们这样引入了动态链接库，但是bundle.js打包出来的代码还不知道该怎么去使用这个动态链接库，所以还得在项目打包的时候进行使用DllReferencePlugin
+
+##### 步骤四：
+
+项目webpack配置中使用DllReferencePlugin进行引用库。使用了这个插件，webpack打包的时候就优先会去使用dll动态链接库中的变量，不会再去react这些框架了。
+
+```js
+//webpack.config.js
+const path = require('path')
+const webpack = require('webpack')
+//生成一个html模板
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+//启动时清空dist文件夹
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+
+module.exports = {
+  entry: {//入口
+    theory_analysis: './src/theory_analysis.js'
+  },
+  mode: 'development',
+  output: {
+    filename: '[name]_[hash].bundle.js',
+    path: path.join(__dirname, 'dist')//打包到的文件夹
+  },
+  plugins: [//使用插件
+    new CleanWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      filename: 'index.html',
+      cache: false
+    }),
+    //引用动态链接库的插件(告诉webpack我们用了哪些动态链接库，该怎么使用这些dll)
+    new webpack.DllReferencePlugin({
+      //需要找到生成的dll动态链接库的manifest映射文件
+      manifest: path.resolve(__dirname, 'dll', 'react.manifest.json')
+      //manifest: require('./dll/react.manifest.json'),//这样也可以
+    })
+  ],
+.....
+}
+```
+
+这是我打包的js文件，使用了react和react-dom
+
+```jsx
+//theory_analysis.js
+import React from 'react'
+import { render } from 'react-dom'
+
+const App = () => {
+  return <div>这是react-app</div>
+}
+
+render(<App />, document.getElementById('app'))
+```
+
+
+
+#### 3、Externals配置项忽略打包
+
+当在webpack.config.js中配置Externals 项时，Externals 项用来告诉 Webpack 构建时代码中使用了哪些不用被打包的模块。Externals可以对某一个第三方框架 或者 库**放到运行环境的全局变量中**。例如：vue放到到运行环境的全局变量中 或者 vuex放到到运行环境的全局变量中。
+
+
+
+
+
+### 体积的优化：
+
+#### 1、webpack.IgnorePlugin()
+
+忽略不用的国际化语言包。
+
+典型：moment.js
+
+```js
+plugins:[
+  ...
+  new webpack.IgnorePlugin(/\.\/locale/,/moment/)
+]
+```
+
+#### 2、抽离公共代码块
+
+optimization配置项中的splitChunks分割代码块
+
+一般多个入口打包才使用抽离公共代码块（将以已打包好的代码进行抽离）
+
+```js
+//webpack.config.js
+module.exports={
+  entry:{
+    index:'./src/index.js'
+    other:'./src/other.js'
+  },
+  ...,
+  optimization:{//优化
+  	splitChunks:{//分割代码块（将以已打包好的代码进行抽离）
+  		cacheGroup:{//缓存组
+  			common:{//缓存组的名称叫common
+  				chunks:'initial',//定义什么时候进行抽离，刚开始就开始抽离
+  				minSize:0,//代码块最小多大，才开始提取
+  				minChunks:2//代码块最少公用过多少次的代码才进行提取
+				},
+  			vendor:{//第三方库文件单独进行抽离，定义名称叫vendor
+          priority:1,//定义权重，先抽离第三方库文件，再去抽离其他的文件
+          test:/node_modules/,//只去把node_module中使用过的代码抽离出来
+          chunks:'initial',//也是刚开始的时候进行抽离
+          minSize:0,
+          minChunks:2
+        }
+			}
+		}
+	}
+}
+```
+
+
+
+### 懒加载模块（按需加载）
+
+webpack提供按需动态加载，使用import语法（ajax来实现的）（或者`require.ensure`也可以动态加载）
+
+使用import语法动态导入，webpack会将该文件单独打包。
+
+```js
+//index.js
+import('./source.js').then(data=>{//es6草案中的语法，ajax实现
+  console.log(data.default)
+})
+
+//source.js
+export default 'Hello'
+```
+
+import语法懒加载原理：
+
+```js
+//模块：file.js
+function getJSON(url, callback) {
+  let xhr = new XMLHttpRequest();
+  xhr.onload = function () {
+    callback(this.responseText)
+  };
+  xhr.open('GET', url, true);
+  xhr.send();
+}
+export function getUsefulContents(url, callback) {
+  getJSON(url, data => callback(JSON.parse(data)));
+}
+
+//主程序：main.js
+import { getUsefulContents } from '/modules/file.js';
+getUsefulContents('http://www.example.com',
+    data => { doSomethingUseful(data) });
+```
+
+
+
+
+
+参考视频：
+
 https://www.bilibili.com/video/BV12a4y1W76V
+
+https://www.bilibili.com/video/BV1eC4y147RX
