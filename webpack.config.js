@@ -1,4 +1,5 @@
 const path = require('path')
+const webpack = require('webpack')
 
 //生成一个html模板
 const HtmlWebpackPlugin = require('html-webpack-plugin')
@@ -7,8 +8,8 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
 module.exports = {
   entry: {
-    main: './src/index.js',
-    // sub: './src/index.js'
+    // main: './src/index.js',
+    theory_analysis: './src/theory_analysis.js'
   },
   /*启用sourcemap:
   开发环境最佳实践：eval-cheap-module-source-map
@@ -42,13 +43,20 @@ module.exports = {
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       template: './src/index.html',
+      filename: 'index.html',
       cache: false
     }),
+    //引用动态链接库的插件(告诉webpack我们用了哪些动态链接库，该怎么使用这些dll)
+    new webpack.DllReferencePlugin({
+      //需要找到生成的dll动态链接库的manifest映射文件
+      manifest: path.resolve(__dirname, 'dll', 'react.manifest.json')
+      //manifest: require('./dll/react.manifest.json'),//这样也可以
+    })
   ],
   module: {//使用loader
     rules: [
       {
-        test: /\.js$/,
+        test: /\.(js|jsx)$/,
         exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
