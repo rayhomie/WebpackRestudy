@@ -15,7 +15,7 @@
   \*************************/
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
-eval("var button = document.createElement('button');\nbutton.innerHTML = '按需加载';\nbutton.addEventListener('click', function () {\n  __webpack_require__.e(/*! import() */ \"src_module_module1_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./module/module1.js */ \"./src/module/module1.js\")).then(function (data) {\n    return data[\"default\"]();\n  });\n});\ndocument.body.appendChild(button);//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi9zcmMvbGF6eUxvYWQuanMuanMiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly93ZWJwYWNrdGVzdC8uL3NyYy9sYXp5TG9hZC5qcz8yMjEwIl0sInNvdXJjZXNDb250ZW50IjpbImNvbnN0IGJ1dHRvbiA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2J1dHRvbicpXG5idXR0b24uaW5uZXJIVE1MID0gJ+aMiemcgOWKoOi9vSdcblxuYnV0dG9uLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgKCkgPT4ge1xuICBpbXBvcnQoJy4vbW9kdWxlL21vZHVsZTEuanMnKS50aGVuKGRhdGEgPT4gZGF0YS5kZWZhdWx0KCkpXG59KVxuZG9jdW1lbnQuYm9keS5hcHBlbmRDaGlsZChidXR0b24pIl0sIm1hcHBpbmdzIjoiQUFBQTtBQUNBO0FBRUE7QUFDQTtBQUFBO0FBQUE7QUFDQTtBQUNBIiwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///./src/lazyLoad.js\n");
+eval("//按需加载、路由懒加载\nvar button = document.createElement('button');\nbutton.innerHTML = '按需加载';\nbutton.addEventListener('click', function () {\n  __webpack_require__.e(/*! import() */ \"src_module_module1_js\").then(__webpack_require__.bind(__webpack_require__, /*! ./module/module1.js */ \"./src/module/module1.js\")).then(function (data) {\n    return data[\"default\"]();\n  }); //es6草案中的语法，ajax实现动态加载文件\n});\ndocument.body.appendChild(button);//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi9zcmMvbGF6eUxvYWQuanMuanMiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly93ZWJwYWNrdGVzdC8uL3NyYy9sYXp5TG9hZC5qcz8yMjEwIl0sInNvdXJjZXNDb250ZW50IjpbIi8v5oyJ6ZyA5Yqg6L2944CB6Lev55Sx5oeS5Yqg6L29XG5jb25zdCBidXR0b24gPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdidXR0b24nKVxuYnV0dG9uLmlubmVySFRNTCA9ICfmjInpnIDliqDovb0nXG5cbmJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHtcbiAgaW1wb3J0KCcuL21vZHVsZS9tb2R1bGUxLmpzJykudGhlbihkYXRhID0+IGRhdGEuZGVmYXVsdCgpKVxuICAvL2VzNuiNieahiOS4reeahOivreazle+8jGFqYXjlrp7njrDliqjmgIHliqDovb3mlofku7Zcbn0pXG5kb2N1bWVudC5ib2R5LmFwcGVuZENoaWxkKGJ1dHRvbikiXSwibWFwcGluZ3MiOiJBQUFBO0FBQ0E7QUFDQTtBQUVBO0FBQ0E7QUFBQTtBQUFBO0FBRUE7QUFDQSIsInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///./src/lazyLoad.js\n");
 
 /***/ })
 
@@ -85,7 +85,7 @@ eval("var button = document.createElement('button');\nbutton.innerHTML = '按需
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("d2764a8716fac2280018")
+/******/ 		__webpack_require__.h = () => ("86f9fad415dd301cff9a")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

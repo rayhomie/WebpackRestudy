@@ -54,6 +54,9 @@ module.exports = {
       //manifest: require('./dll/react.manifest.json'),//这样也可以
     })
   ],
+  resolveLoader: {//配置loader存在的文件夹，默认只有node_modules（自定义loader）
+    modules: ['node_modules', path.resolve(__dirname, 'custom-loader')]
+  },
   module: {//使用loader
     rules: [
       {
