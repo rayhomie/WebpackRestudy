@@ -51,7 +51,10 @@ module.exports = {
       manifest: path.resolve(__dirname, 'dll', 'react.manifest.json')
       //manifest: require('./dll/react.manifest.json'),//这样也可以
     })
-  ],
+  ],  
+  resolveLoader: {//配置loader存在的文件夹，默认只有node_modules（自定义loader）
+    modules: ['node_modules', path.resolve(__dirname, 'custom-loader')]
+  },
   module: {//使用loader
     rules: [
       {
@@ -136,6 +139,8 @@ module.exports = {
 ```
 
 ## 2】loader
+
+loader的执行顺序是**从下到上，从右到左**。
 
 ### babel-loader
 
@@ -546,6 +551,56 @@ const App = document.getElementById('app')
 App.innerHTML = '<div class="iconfont icon-fengche"></div>';
 ```
 
+### 实现一个babel-loader：
+
+#### 步骤一：
+
+新建一个文件custom-loader/babel-loader.js
+
+```js
+//babel-loader.js
+const babel = require('@babel/core')//代码编写babel转换
+const loaderUtils = require('loader-utils')//获取webpack配置中的传参
+const validateOptions = require('schema-utils')//用于验证loader配置中传的option的合法性(类似于mongoose)
+
+function babel_loader(source) {//this-->loaderContext（这里是使用bind去执行的这个loader）
+  let options = loaderUtils.getOptions(this)//获取webpack配置loader时的options配置  
+ /* 验证传参合法性
+ 	let schema = { type:'object',
+                properties:{
+                  text:{ type:'string' },
+                  filename:{ type:'string' }
+                }}
+   validateOptions(schema,options,'babel-loader')
+ */
+  let cb = this.async()//调用cb函数用来结束当前loader执行
+  babel.transform(source, {//异步操作
+    ...options,
+    sourceMap: true,//开启sourcemap
+    filename: this.resourcePath.split('/').pop()//给sourcemap对应文件名
+  }, (err, res) => {
+    cb(err, res.code, res.map)//异步结束
+  })
+}
+
+module.exports = babel_loader
+```
+
+#### 步骤二：
+
+安装@babel/core（babel提供的编程转换功能）和loader-utils（用于获取webpack中loader配置项的传参）
+
+- `npm i -D @babel/core loader-utils`
+
+```js
+//webpack.config.js
+resolveLoader: {//配置loader存在的文件夹，默认只有node_modules
+    modules: ['node_modules', path.resolve(__dirname, 'custom-loader')]
+},
+```
+
+
+
 
 
 ## 3】SourceMap
@@ -766,7 +821,7 @@ module2()
 
 再比如： clean-webpack-plugin就是在刚开始webpack启动的时候，将dist文件夹清空。
 
-
+TerserPlugin：首先了解下 webpack 中用于代码删除和压缩的一个插件，TerserPlugin。 Webpack4.0 默认使用 terser-webpack-plugin 压缩插件，在此之前是使用 uglifyjs-webpack-plugin，其中的区别是内置对 ES6 的压缩不是很好，同时我们可以打开 parallel 参数，使用多进程压缩，加快压缩。
 
 
 
