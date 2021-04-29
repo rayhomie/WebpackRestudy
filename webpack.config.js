@@ -40,6 +40,14 @@ module.exports = {
       这里的hash是根据文件内容来生成hash值（可以用于网络资源请求的缓存）*/
     path: path.join(__dirname, 'dist')//打包到的文件夹
   },
+  resolve: {
+    extensions: ['.tsx', '.jsx', '.js'],//不需要写后缀名，按顺序去找文件
+    alias: {//别名
+      '@': path.resolve(__dirname, 'src')
+    },
+    modules: [path.resolve(__dirname, "./src/"), "node_modules"]
+    //告诉 webpack 解析模块时应该搜索的目录，即 require 或 import 模块的时候，只写模块名的时候，到哪里去找，其属性值为数组，因为可配置多个模块搜索路径，其搜索路径必须为绝对路径，
+  },
   plugins: [//使用插件
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
