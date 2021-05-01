@@ -10,6 +10,8 @@ const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 //启动时清空dist文件夹
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+//单独打包css，不使用style标签，自动使用Link标签
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 module.exports = {
   entry: {
     index: './src/index.js',//基础配置
@@ -39,6 +41,14 @@ module.exports = {
     /*[name]对应的是entry中的名字;这里的'[name]'的规则命名称为占位符。
       也可以使用[ext]、[hash]；来使用占位符。这里的hash是根据文件内容来生成hash值（可以用于网络资源请求的缓存）*/
     path: path.join(__dirname, 'dist')//打包到的文件夹
+  },
+  resolve: {
+    extensions: ['.tsx', '.jsx', '.js'],//不需要写后缀名，按顺序去找文件
+    alias: {//别名
+      '@': path.resolve(__dirname, 'src')
+    },
+    modules: [path.resolve(__dirname, "./src/"), "node_modules"]
+    //告诉 webpack 解析模块时应该搜索的目录，即 require 或 import 模块的时候，只写模块名的时候，到哪里去找，其属性值为数组，因为可配置多个模块搜索路径，其搜索路径必须为绝对路径，
   },
   plugins: [//使用插件
     new HtmlWebpackPlugin({
@@ -100,7 +110,8 @@ module.exports = {
         //写法一：use: ['style-loader', 'css-loader']
         //写法二：从后往前的顺序进行读取：
         use: [
-          { loader: "style-loader" },
+        //  { loader: "style-loader" },
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
           { loader: "css-loader",
            options:{//开启cssmodule
              modules: { localIdentName: '[name][hash:base64:6]' }
@@ -113,13 +124,19 @@ module.exports = {
         test: /\.scss$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'sass-loader','postcss-loader']
+        use: [
+          //'style-loader',
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
+          'css-loader', 'sass-loader','postcss-loader']
       },
       {//前提是安装less预处理器
         test: /\.less$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'less-loader','postcss-loader']
+        use: [
+          //'style-loader',
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
+          'css-loader', 'less-loader','postcss-loader']
       },
       /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
       使用方式类似于babel，也需要安装相应想要使用的插件，
@@ -815,6 +832,8 @@ module2()
 
 ## 5】plugin
 
+### 常用plugin
+
 总结一句话就是：插件可以在webpack运行在某个阶段（生命周期）做一些事情。
 
 比如：html-webpack-plugin就是在打包结束的时候，将打包好的js文件引用到指定模板html文件中。
@@ -822,6 +841,386 @@ module2()
 再比如： clean-webpack-plugin就是在刚开始webpack启动的时候，将dist文件夹清空。
 
 TerserPlugin：首先了解下 webpack 中用于代码删除和压缩的一个插件，TerserPlugin。 Webpack4.0 默认使用 terser-webpack-plugin 压缩插件，在此之前是使用 uglifyjs-webpack-plugin，其中的区别是内置对 ES6 的压缩不是很好，同时我们可以打开 parallel 参数，使用多进程压缩，加快压缩。
+
+mini-css-extract-plugin是用来单独打包css，用法如下
+
+```js
+plugins: [
+  new MiniCssExtractPlugin({
+    filename: "[name].[chunkhash:8].css",
+    chunkFilename: "[id].css"
+  })
+],
+module: {
+  rules: [{
+    test: /\.css$/,
+    use: [
+      MiniCssExtractPlugin.loader,//这里就不使用'style-loader'，因为我们不需要使用style标签，自动使用link标签链接打包好的css
+      "css-loader"
+    ]
+  }]
+}
+```
+
+
+
+
+
+### 手写plugin
+
+在webpack的npm依赖包中可以找到一个名叫Compiler.js的文件，里面有所所有的钩子。
+
+[webpack提供了很多钩子](https://webpack.docschina.org/api/compiler-hooks/)，这里简单介绍几个：
+
+- entryOption : 在 webpack 选项中的 entry 配置项 处理过之后，执行插件。
+- afterPlugins : 设置完初始插件之后，执行插件。
+- compilation : 编译创建之后，生成文件之前，执行插件。。
+- emit : 生成资源到 output 目录之前。
+- done : 编译完成。
+
+在 `compiler.hooks` 下指定事件钩子函数，便会触发钩子时，执行回调函数。
+Webpack 提供[三种触发钩子的方法](https://blog.csdn.net/qq_36380426/article/details/104471422)：
+
+- `tap` ：以**同步方式**触发钩子；
+  - 回调方式:`(compilation)=>{}`
+  - 同步执行。
+- `tapAsync` ：以**异步方式**触发钩子；
+  - 回调方式:`(compilation,end)=>{end()}`
+  - 必须使用第二个参数来执行，结束该回调，webpack才能继续执行。
+- `tapPromise` ：以**异步方式**触发钩子，返回 Promise；
+  - 回调方式:`(compilation)=>Promise`
+  - 必须使用Promise提供的resolve或者reject才能结束回调，webpack才能继续。
+
+#### ①同步触发
+
+需要在我们写的插件的类中写一个原型方法apply并传入一个上下文形参。
+
+因为在在webpack过程中，使用我们插件的时候，会调用执行插件原型上的apply方法，并将上下文实体传入。
+
+```js
+//CustomPlugin.js
+class CustomPlugin {
+  apply(compiler) {//compiler.hooks
+    //调用我们需要使用的钩子，并写入回调
+    compiler.hooks.done.tap('Hello Custom Plugin', (
+      compilation /* 在 hook 被触及时，会将 compilation 作为参数传入。 */
+    ) => {
+      console.log(compilation)
+      console.log('Hello Custom Plugin!');
+    });
+  }
+}
+module.exports = CustomPlugin
+
+//webpack.config.js
+const CustomPlugin = require('CustomPlugin');
+module.exports={
+  ...//传入的是插件实例
+  plugins:[new CustomPlugin()],
+  ...
+}
+```
+
+#### ②异步触发钩子
+
+```js
+class AsyncPlugin {
+  apply(compiler) {//compiler.hooks
+    //下面是指：异步调用compiler的emit钩子
+    compiler.hooks.emit.tapAsync('AsyncPlugin', (compilation, end) => {
+      console.log('开始第一次等待~~~~~~~~', new Date());
+      setTimeout(() => {
+        console.log('第一次等待结束~~~~~~~~', new Date());
+        end()
+      }, 3000)
+    })
+
+    //下面是指：异步promise调用compiler的emit钩子
+    compiler.hooks.emit.tapPromise('AsyncPlugin', (compilation) => {
+      return new Promise((resolve, reject) => {
+        console.log('开始第二次等待~~~~~~~~', new Date())
+        setTimeout(() => {
+          console.log('第二次等待结束~~~~~~~~', new Date())
+          resolve('')
+        }, 3000)
+      })
+    })
+  }
+}
+
+module.exports = AsyncPlugin
+
+/*此时执行的打包会在控制台输出一下内容：
+开始第一次等待~~~~~~~~ 2021-05-01T04:18:57.491Z
+第一次等待结束~~~~~~~~ 2021-05-01T04:19:00.495Z
+开始第二次等待~~~~~~~~ 2021-05-01T04:19:00.496Z
+第二次等待结束~~~~~~~~ 2021-05-01T04:19:03.499Z
+编译完成~~~~
+....
+webpack 5.35.0 compiled successfully in 7078 ms
+*/
+```
+
+
+
+### [FileListPlugin](https://www.bilibili.com/video/BV1QE411M7sj?p=53)
+
+首先明确需求，我们想要获取webpack打包好的各文件的名字和大小，然后创建一个md格式的文件并输出。结果预览：以下是打包出来的list.md文件
+
+```md
+## 文件名    资源大小
+- lazyLoad_e5d002d4cb2150bdd8ce.bundle.js    13544
+- src_module_module1_js_e5d002d4cb2150bdd8ce.bundle.js    2243
+- index.html    426
+```
+
+我们先来看看该怎么用我们写的这个插件：
+
+```js
+//webpack.config.js
+const FileListPlugin = require('FileListPlugin')
+module.exports={
+  ...
+  plugins:[
+    new FileListPlugin({
+      filename:'list.md'
+    })
+  ],
+  ...
+}
+```
+
+开始写代码FileListPlugin.js
+
+```js
+class FileListPlugin {
+  constructor({ filename }) {
+    this.filename = filename
+  }
+  apply(compiler) {//webpack会调用apply
+    compiler.hooks.emit.tap(//同步处理。不需要结束回调
+      'FileListPlugin',
+      (compilation) => {
+        //我们需要使用assets资源对象获取打包好的文件明细
+        const assets = compilation.assets
+        let content = `## 文件名    资源大小\n`
+        Object.entries(assets).forEach(([filename, statObj]) => {
+          //获取文件名和对应文件的大小
+          content += `- ${filename}    ${statObj.size()}\n`
+        })
+        //这样使用source和size就可以写入内容到相应文件
+        assets[this.filename] = {
+          source() { return content },
+          size() { return content.length }
+        }
+      })
+  }
+}
+module.exports = FileListPlugin
+```
+
+
+
+### [InlineSourcePlugin](https://www.bilibili.com/video/BV1QE411M7sj?p=54)
+
+首先明确需求：常规的操作是使用html-webpack-plugin将打包好的js文件以外链src的形式导入html，css文件也是使用Link外链的形式去导入；而我们现在的需求是要把打包好的**js文件内容和css文件内容**直接以script和style标签的形式插到html中。
+
+需要配合html-webpack-plugin一起使用，因为需要使用到[html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin#events)的钩子api对HtmlWebpackPlugin执行过程进行处理。（这里注意使用alterAssetTagGroups钩子，**把使用了HtmlWebpackPlugin插件且即将插入html的标签都进行预处理一下**，同时也可以将外链的文件放到**cdn进行打包优化**）
+
+还是我们先看下该怎么用这个插件再去写：
+
+```js
+//webpack.config.js
+const InlineSourcePlugin = require('InlineSourcePlugin')
+module.exports = {
+  ...
+  plugins:[
+    new InlineSourcePlugin({
+      /*需要传入一个正则，判断需要修改的标签中外链文件的后缀，
+      因为也有可能link一些json等文件到html中，
+      目的是处理外链文件是.js结尾的script标签和外链文件是.css结尾的link标签*/
+      match: /\.(js|css)/
+    })
+  ],
+  ...
+}
+```
+
+具体实现：
+
+```js
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+/**
+ * 首先明确需求：
+ * 常规的操作是使用html-webpack-plugin将打包好的js文件以外链src的形式导入html，css文件也是使用Link外链的形式去导入；
+ * 而我们现在的需求是要把打包好的js文件内容和css文件内容直接以script和style标签的形式插到html中。
+ */
+class InlineSourcePlugin {
+  constructor({ match }) {
+    //需要传入一个正则，判断需要内联的文件类型
+    this.regex = match
+  }
+  apply(compiler) {
+    //需要使用到HtmlWebpackPlugin的钩子api对HtmlWebpackPlugin执行过程进行处理。
+    //1.首先把webpack执行上下文compilation暴露给HtmlWebpackPlugin使用
+    compiler.hooks.compilation.tap('InlineSourcePlugin', (compilation) => {
+      //2.使用HtmlWebpackPlugin提供的hooks api进行处理
+      //https://github.com/jantimon/html-webpack-plugin#events
+      //此时我们用到的是alterAssetTagGroups（修改插入标签组到html的时候的钩子）
+      HtmlWebpackPlugin.getHooks(compilation).alterAssetTagGroups.tapAsync(
+        'alterPlugin',
+        (data, end) => {
+          // console.log(data)//打印出来的重要内容是，将要经HtmlWebpackPlugin处理插入html的标签信息
+          //需要写一个方法来处理标签并返回处理结果
+          data = this.processTags(data, compilation)
+          //成功之后把处理结果，以回调的方式返回去
+          end(null, data)
+        }
+      )
+    })
+  }
+  //外链资源的标签处理成内联的形式（标签+内容）
+  processTags(data, compilation) {
+    let headTags = []
+    let bodyTags = []
+    //需要将要处理的项的记过分别存到数组中，最后一起返回
+    data.headTags.forEach(item => {
+      headTags.push(this.handleTag(item, compilation))
+    })
+    data.bodyTags.forEach(item => {
+      bodyTags.push(this.handleTag(item, compilation))
+    })
+    return { ...data, headTags, bodyTags }//将处理结果返回
+  }
+  //正式处理标签
+  handleTag(tag, compilation) {
+    /*console.log(tag)//打印一下即将插入的标签对象，然后就可以开始安找自己的需求进行处理。
+    {
+      tagName: 'script',
+      voidTag: false,
+      meta: { plugin: 'html-webpack-plugin' },
+      attributes: { defer: true, src: 'index_d187911761f8039b458f.bundle.js' }
+    }
+    {
+      tagName: 'link',
+      voidTag: true,
+      meta: { plugin: 'html-webpack-plugin' },
+      attributes: { href: 'index.70ae7073.css', rel: 'stylesheet' }
+    }*/
+    let newTag = { ...tag };
+    let url;
+    if (tag.tagName === 'link' && this.regex.test(tag.attributes.href)) {
+      //处理外链文件是.css结尾的link标签
+      newTag = {
+        tagName: 'style',
+        voidTag: false,
+        attributes: { type: 'text/css' }
+      }
+      url = tag.attributes.href
+      if (url) {
+        //使用compilation上下文的资源对象获取打包好的文件，然后写入到style标签的innerHTML属性上
+        newTag.innerHTML = compilation.assets[url].source()
+        delete compilation.assets[url]//将原来将要打包生成的文件删除掉，因为内容已经放到了html的标签中
+      }
+    }
+
+    if (tag.tagName === 'script' && this.regex.test(tag.attributes.src)) {
+      //处理外链文件是.js结尾的script标签
+      newTag = {
+        tagName: 'script',
+        voidTag: false,
+        attributes: { type: 'application/javascript' }
+      }
+      url = tag.attributes.src
+      if (url) {
+        //使用compilation上下文的资源对象获取打包好的文件，然后写入到script标签的innerHTML属性上
+        newTag.innerHTML = compilation.assets[url].source()
+        delete compilation.assets[url]//将原来将要打包生成的文件删除掉，因为内容已经放到了html的标签中
+      }
+    }
+    return newTag//返回修改后的新标签
+  }
+}
+
+module.exports = InlineSourcePlugin
+```
+
+可以用这个来实现资源打包到cdn，然后再插入标签，优化打包。
+
+### [UploadPlugin](https://www.bilibili.com/video/BV1QE411M7sj?p=55&spm_id_from=pageDriver)
+
+需求：使用UploadPlugin可以将打包好的文件上传到cdn或oss上面，从而实现自动发布。
+
+还是先来看看该怎么使用：
+
+```js
+//webpack.config.js
+const UploadPlugin = require('UploadPlugin')
+module.exports = {
+  ...
+  output: { 
+    //添加src时，的根路径比如现在就是src='http://cdn.xxx.com/[name].bundle.js'
+    publicPath: 'http://cdn.xxx.com/',
+    ...
+  },
+  plugins:[
+    //需要传入一些oss、cdn相关的对象存储配置项
+    new UploadPlugin({
+      region: 'oss-cn-chengdu',
+      accessKeyId: '',
+      accessKeySecret: '',
+      bucket: ''
+    })
+  ],
+  ...
+}
+```
+
+实现：
+
+```js
+class UploadPlugin {
+  constructor(options) {
+    this.options = options;
+    /*
+    一般会去执行注册一些上传相关的sdk。
+    */
+  }
+  apply(compiler) {//compiler是webpack提供的执行上下文，里面有钩子
+    compiler.hooks.afterEmit.tapPromise('UploadPlugin', (compilation) => {
+      //我们需要去拿到打包好的文件，然后才能去上传
+      let assets = compilation.assets
+      /*console.log(assets)
+        {
+          'index.6c0f3869.css': SizeOnlySource { _size: 2045 },
+          'index_026f604ab272c4366956.bundle.js': SizeOnlySource { _size: 13811 },
+          'index.html': SizeOnlySource { _size: 472 }
+        }*/
+      let promises = []
+      Object.keys(assets).forEach(filename => {
+        promises.push(this.Upload(filename))
+      })
+      //这里使用Promise.all来处理多文件上传
+      return Promise.all(promises)
+    })
+  }
+  Upload(filename) {
+    return new Promise((resolve, reject) => {
+      //拿到打包好的本地文件，然后才能正常去上传
+      let localFile = path.resolve(__dirname, '../dist', filename)
+      /*
+      ...上传oss服务器的代码,这里就主要实现一下，从webpack钩子上下文中拿打包好的文件。
+      */
+      resolve('upload success!!!')
+    })
+  }
+}
+//上传文件之前，我们在webpack.config.js的output项中设置publicPath到cdn就好了。
+module.exports = UploadPlugin
+```
+
+
 
 
 
@@ -1105,6 +1504,21 @@ export function getUsefulContents(url, callback) {
 import { getUsefulContents } from '/modules/file.js';
 getUsefulContents('http://www.example.com',
     data => { doSomethingUseful(data) });
+```
+
+
+
+## 7】[resolve配置](https://www.cnblogs.com/pingan8787/p/11838067.html)
+
+```js
+ resolve: {
+   extensions: ['.tsx', '.jsx', '.js'],//不需要写后缀名，按顺序去找文件
+     alias: {//别名
+       '@': path.resolve(__dirname, 'src')
+     },
+       modules: [path.resolve(__dirname, "./src/"), "node_modules"]
+   //告诉 webpack 解析模块时应该搜索的目录，即 require 或 import 模块的时候，只写模块名的时候，到哪里去找，其属性值为数组，因为可配置多个模块搜索路径，其搜索路径必须为绝对路径，
+ },
 ```
 
 
