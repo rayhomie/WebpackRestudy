@@ -5,6 +5,9 @@ const DonePlugin = require('./custom-plugin/DonePlugin')
 const AsyncPlugin = require('./custom-plugin/AsyncPlugin')
 const FileListPlugin = require('./custom-plugin/FileListPlugin')
 const InlineSourcePlugin = require('./custom-plugin/InlineSourcePlugin')
+const OssOptions = require('./oss.json')
+const UploadPlugin = require('./custom-plugin/UploadPlugin')
+
 
 //生成一个html模板
 const HtmlWebpackPlugin = require('html-webpack-plugin')
@@ -39,7 +42,7 @@ module.exports = {
   },
   mode: 'development',
   output: {
-    // publicPath: 'http://cdn.xxx.com',
+    // publicPath: 'http://cdn.xxx.com/',
     //添加src时，的根路径比如现在就是src='http://cdn.xxx.com/[name].bundle.js'
     filename: '[name]_[hash].bundle.js',
     /*[name]对应的是entry中的名字;这里的'[name]'的规则命名称为占位符。
@@ -77,12 +80,19 @@ module.exports = {
     // new FileListPlugin({
     //   filename: 'list.md'
     // }),
-    new InlineSourcePlugin({
-      /*需要传入一个正则，判断需要修改的标签中外链文件的后缀，
-      因为也有可能link一些json等文件到html中，
-      目的是处理外链文件是.js结尾的script标签和外链文件是.css结尾的link标签*/
-      match: /\.(js|css)/
-    })
+    // new InlineSourcePlugin({
+    //   /*需要传入一个正则，判断需要修改的标签中外链文件的后缀，
+    //   因为也有可能link一些json等文件到html中，
+    //   目的是处理外链文件是.js结尾的script标签和外链文件是.css结尾的link标签*/
+    //   match: /\.(js|css)/
+    // }),
+    // new UploadPlugin(
+    //   OssOptions
+    //   /*格式：{ "region": "oss-cn-chengdu",
+    //       "accessKeyId": "xxx",
+    //       "accessKeySecret": "xxx",
+    //       "bucket": "xxx" } */
+    // )
   ],
   resolveLoader: {//配置loader存在的文件夹，默认只有node_modules（自定义loader）
     modules: ['node_modules', path.resolve(__dirname, 'custom-loader')]
