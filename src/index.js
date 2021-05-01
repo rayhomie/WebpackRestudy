@@ -1,5 +1,5 @@
 import '@babel/polyfill'//补充ES6+的api的实现
-import avatar from './头像.jpeg'
+import avatar from './headpic.jpeg'
 // import styles from './index.css'//启用css模块化，就不能使用正常导入
 // import './index.less'
 import './index.scss'

@@ -1,16 +1,23 @@
 const path = require('path')
 const webpack = require('webpack')
 
+const DonePlugin = require('./custom-plugin/DonePlugin')
+const AsyncPlugin = require('./custom-plugin/AsyncPlugin')
+const FileListPlugin = require('./custom-plugin/FileListPlugin')
+const InlineSourcePlugin = require('./custom-plugin/InlineSourcePlugin')
+
 //生成一个html模板
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 //启动时清空dist文件夹
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+//单独打包css，不使用style标签，自动使用Link标签
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports = {
   entry: {
-    // index: './src/index.js',//基础配置
+    index: './src/index.js',//基础配置
     // theory_analysis: './src/theory_analysis.js'//打包优化，dll
-    lazyLoad: './src/lazyLoad.js'//路由懒加载、按需加载
+    // lazyLoad: './src/lazyLoad.js'//路由懒加载、按需加载
   },
   /*启用sourcemap:
   开发环境最佳实践：eval-cheap-module-source-map
@@ -60,6 +67,21 @@ module.exports = {
       //需要找到生成的dll动态链接库的manifest映射文件
       manifest: path.resolve(__dirname, 'dll', 'react.manifest.json')
       //manifest: require('./dll/react.manifest.json'),//这样也可以
+    }),
+    new MiniCssExtractPlugin({
+      filename: "[name].[chunkhash:8].css",
+      chunkFilename: "[id].css"
+    }),
+    // new DonePlugin(),
+    // new AsyncPlugin(),
+    // new FileListPlugin({
+    //   filename: 'list.md'
+    // }),
+    new InlineSourcePlugin({
+      /*需要传入一个正则，判断需要修改的标签中外链文件的后缀，
+      因为也有可能link一些json等文件到html中，
+      目的是处理外链文件是.js结尾的script标签和外链文件是.css结尾的link标签*/
+      match: /\.(js|css)/
     })
   ],
   resolveLoader: {//配置loader存在的文件夹，默认只有node_modules（自定义loader）
@@ -118,29 +140,37 @@ module.exports = {
         //use的数组里面是从后往前加载，我们需要先解析css代码以及文件之间的依赖关系，再将style标签插入head中
         //写法一：use: ['style-loader', 'css-loader',"postcss-loader"]
         //写法二：从后往前的顺序进行读取：
-        use: [{ loader: "style-loader" },
-        {
-          loader: "css-loader",
-          options: {
-            modules: {
-              localIdentName: '[name][hash:base64:6]'
-            },
-          }
-          //打开cssmodule,启用之后就只能用模块化导入，也可以进行配置，让一些文件不启用模块化
-        },
-        { loader: "postcss-loader" }]
+        use: [
+          // { loader: "style-loader" },
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
+          {
+            loader: "css-loader",
+            options: {
+              modules: {
+                localIdentName: '[name][hash:base64:6]'
+              },
+            }
+            //打开cssmodule,启用之后就只能用模块化导入，也可以进行配置，让一些文件不启用模块化
+          },
+          { loader: "postcss-loader" }]
       },
       {//前提是安装sass预处理器
         test: /\.scss$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'postcss-loader', 'sass-loader']
+        use: [
+          // 'style-loader',
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
+          'css-loader', 'postcss-loader', 'sass-loader']
       },
       {//前提是安装less预处理器
         test: /\.less$/,
         exclude: /node_modules/,
         //从后往前的顺序进行读取：
-        use: ['style-loader', 'css-loader', 'postcss-loader', 'less-loader']
+        use: [
+          //'style-loader',
+          MiniCssExtractPlugin.loader,//单独打包css，不使用style标签，自动使用Link标签
+          'css-loader', 'postcss-loader', 'less-loader']
       },
       /*需要注意的是：postcss的目的是让css3的属性通过脚本的方式生成厂商前缀的工具，
       使用方式类似于babel，也需要安装相应想要使用的插件，
