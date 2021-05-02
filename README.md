@@ -842,6 +842,8 @@ module2()
 
 TerserPlugin：首先了解下 webpack 中用于代码删除和压缩的一个插件，TerserPlugin。 Webpack4.0 默认使用 terser-webpack-plugin 压缩插件，在此之前是使用 uglifyjs-webpack-plugin，其中的区别是内置对 ES6 的压缩不是很好，同时我们可以打开 parallel 参数，使用多进程压缩，加快压缩。
 
+webpack-bundle-analyzer可视化分析打包大小。
+
 mini-css-extract-plugin是用来单独打包css，用法如下
 
 ```js
@@ -1506,6 +1508,68 @@ getUsefulContents('http://www.example.com',
     data => { doSomethingUseful(data) });
 ```
 
+### [React懒加载](https://www.cnblogs.com/xgqfrms/p/13820944.html)
+
+React中可以使用lazy来实现懒加载组件。
+
+React.lazy 函数让你可以可以像导入将常规组件一样的渲染一个动态导入。
+
+```js
+import OtherComponent from './OtherComponent';
+// React.lazy
+const OtherComponent = React.lazy(() => import('./OtherComponent'));
+```
+
+首次呈现此组件时，它将自动加载包含OtherComponent的捆绑包。
+
+React.lazy 采用了必须调用动态 import（）的函数。
+这必须返回一个 Promise，该 Promise 解析为一个带有默认导出的模块，该模块包含一个 React组件。
+
+然后，应该将懒惰的组件呈现在Suspense组件中，这使我们可以在等待懒惰的组件加载时显示一些后备内容（例如加载指示符）。
+
+```js
+import React, { Suspense } from 'react';
+
+const OtherComponent = React.lazy(() => import('./OtherComponent'));
+
+function MyComponent() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <OtherComponent />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+fallback prop 支持在等待组件加载时接受要渲染的任何React元素
+
+您可以将 Suspense 组件放置在 lazy 组件上方的任何位置
+
+您甚至可以用一个 Suspense 组件包装多个惰性组件。
+
+```js
+import React, { Suspense } from 'react';
+
+const OtherComponent = React.lazy(() => import('./OtherComponent'));
+
+const AnotherComponent = React.lazy(() => import('./AnotherComponent'));
+
+function MyComponent() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <section>
+          <OtherComponent />
+          <AnotherComponent />
+        </section>
+      </Suspense>
+    </div>
+  );
+}
+```
+
 
 
 ## 7】[resolve配置](https://www.cnblogs.com/pingan8787/p/11838067.html)
@@ -1520,6 +1584,152 @@ getUsefulContents('http://www.example.com',
    //告诉 webpack 解析模块时应该搜索的目录，即 require 或 import 模块的时候，只写模块名的时候，到哪里去找，其属性值为数组，因为可配置多个模块搜索路径，其搜索路径必须为绝对路径，
  },
 ```
+
+
+
+## 8】localStorage缓存js实践
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210502193207855.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80NTIyMTAzNg==,size_16,color_FFFFFF,t_70)
+
+思路:
+
+1. js包都不以script标签的形式插入到html中，而是需要以dom的形式动态设置script，并写入脚本。
+2. 判断bundle缓存是否过期：使用htmlwebpackplugin打包时不插入script标签，而是插入<div>z89e0af6.bundle.js</div>但是不让它显示。（我们需要手动写插件进行拦截）
+3. 在index.html中写脚本进行判断。
+
+### dll打包
+
+dll打包这里就不多说了。
+
+### BundleNamePlugin
+
+```js
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+class BundleNamePlugin {
+  apply(compiler) {
+    compiler.hooks.compilation.tap('BundleNamePlugin', (compilation) => {
+      HtmlWebpackPlugin.getHooks(compilation).alterAssetTagGroups.tapAsync(
+        'alterPlugin',
+        (data, end) => {
+          data = this.processTags(data, compilation)
+          end(null, data)
+        }
+      )
+    })
+  }
+  processTags(data, compilation) {
+    //data是htmlwebpackplugin要插入（等操作）的标签信息
+    let bodyTags = data.bodyTags
+    //将bundlejsName插入到html中
+    let newTag = {
+      tagName: 'div',
+      voidTag: false,
+      attributes: { style: 'display:none', id: "bundleName" }
+    }
+    let bundleName
+    data.headTags.forEach(item => {
+      if (item.tagName === 'script') {
+        bundleName = item.attributes.src
+      }
+    })
+    newTag.innerHTML = bundleName
+    bodyTags.push(newTag)
+    return {
+      ...data, bodyTags, headTags: [] //本来要插入bundlejs的script标签,这里就把headerTags置空，不插入
+    }
+  }
+}
+module.exports = BundleNamePlugin
+```
+
+### 缓存判断脚本
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <title>雷浩简历</title>
+  <link crossorigin="" rel="shortcut icon" type="image/x-icon"
+    href="https://personal-financ.oss-cn-chengdu.aliyuncs.com/cdn/111.png" />
+
+</head>
+
+<body>
+  <div id="app"></div>
+  <div style="display:none" id="bundleName">
+    /z89e0af6.bundle.js
+  </div>
+</body>
+<script>
+  //判断本地是否有dll（dll的都是依赖包，不会变的不需要设置hash名）
+  var ReactDll = window.localStorage.getItem('react.dll.js')
+  //从div中获取bundle的hash文件名（需要打包的时候提前植入html中）
+  var bundleName = document.getElementById('bundleName').innerText
+  //判断本地是否有Bundle
+  var Bundle = window.localStorage.getItem(getFilename(bundleName))
+  //bundle的缓存过期则移除
+  if (hasBundle() !== getFilename(bundleName)) {
+    localStorage.removeItem(hasBundle())
+  }
+  if (ReactDll) {//reactDll有缓存
+    eval.call(window, ReactDll)//执行缓存函数必须挂载到全局，否则会被垃圾回收
+    if (hasBundle() === getFilename(bundleName)) {//Bundle没过期
+      eval.call(window, Bundle)//执行缓存函数必须挂载到全局，否则会被垃圾回收
+    } else {//Bundle过期
+      cacheBundle()
+    }
+  } else {//否则都不用缓存
+    cacheReactDll(cacheBundle)//一定要用回调，因为Bundle依赖于Dll，必须先执行Dll，否则报错
+  }
+
+  //第一次获取并缓存Dll
+  function cacheReactDll(cb) {
+    FetchFile('https://personal-financ.oss-cn-chengdu.aliyuncs.com/cdn/react.dll.js', cb)
+  }
+  //第一次获取并缓存Bundle
+  function cacheBundle() {
+    FetchFile(location.href + getFilename(bundleName))
+  }
+
+  //首次获取资源js文件,并写入到localstorage
+  function FetchFile(url, cb) {
+    fetch(url)
+      .then(res => res.blob())
+      .then(myBlob => {
+        var reader = new FileReader()
+        reader.onload = () => {
+          var script = document.createElement('script')
+          script.innerHTML = reader.result
+          script.type = 'text/javascript';
+          document.querySelector('head').appendChild(script)
+          window.localStorage.setItem(getFilename(url), reader.result)
+          cb && cb();
+        }
+        reader.readAsText(myBlob)
+      })
+  }
+  //通过url获取文件名
+  function getFilename(url) {
+    var temp = url.split('/')
+    return temp[temp.length - 1]
+  }
+  //判断本地是有有bundle，并返回文件名
+  function hasBundle() {
+    return Object.keys(localStorage).find(item => item.includes('bundle'))
+  }
+
+</script>
+
+</html>
+```
+
+
 
 
 
